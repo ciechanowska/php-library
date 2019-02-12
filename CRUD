@@ -1,0 +1,122 @@
+<?php
+//CRUD index side med link vis, slet, rediger, opret
+$sql="SELECT * FROM artikler";
+$result= mysqli_query($connection, $sql);
+ while($row=mysqli_fetch_array($result)) {
+	 $date_timestamp=($row["OprettetDen"]);
+	 $date_string=date('j/n-Y, H:i:s, $date_timestamp');
+	 echo"<article>";
+	 echo"<h2>$row[Titel]</h2>";
+	 echo"<p>";
+	 echo"<b>$row[Rubrik]</b><br>";
+	 echo"$row[Indhold]";
+	 echo"</p>";
+	 echo"<p><time>$date_timestamp</time></p>";
+	 //links med vis, slet, rediger, opret
+	 echo"<p><a href='show.php?id=$row[id]'>Vis</a>";
+	 echo"<p><a href='delete.php?id=$row[id]'>Slet</a>";
+	 echo"<p><a href='edit.php?id=$row[id]'>Rediger</a>";
+	 echo"<hr></article>";
+ }
+ 
+ echo"<p><br><a href='new.php'>Opret nyhed</a>";
+
+?>
+<?php
+//CRUD side vis
+$id=$_GET['id'];
+$sql="SELECT * FROM artikler WHERE Id=$id";
+$result= mysqli_query($connection, $sql);
+
+     $row=mysqli_fetch_array($result);
+	 $date_timestamp=($row["OprettetDen"]);
+	 $date_string=date('j/n-Y, H:i:s, $date_timestamp');
+	 echo"<article>";
+	 echo"<h2>$row[Titel]</h2>";
+	 echo"<p>";
+	 echo"<b>$row[Rubrik]</b><br>";
+	 echo"$row[Indhold]";
+	 echo"</p>";
+	 echo"<p><time>$date_timestamp</time></p>";
+	 echo"<p><a href='index.php'>Tilbage til forsiden</a>";
+	 echo"</article>";
+ 
+?>
+<?php
+//CRUD side rediger
+        $titel="";
+		$rubrik="";
+		$indhold="";
+    if(isset($_GET['id'])){
+		$id=$_GET['id'];
+		
+		
+		if(isset($_POST['submit']))
+		{
+			$titel=$_POST['Titel'];
+			$rubrik=$_POST['Rubrik'];
+			$indhold=$_POST['Indhold'];
+			
+			echo $sql="UPDATE Artikel SET Titel='$titel', Rubrik='$rubrik', Indhold='$indhold' WHERE Id=$id";
+			mysqli_query($connection, $sql);
+			
+		}
+		else{ $sql="SELECT * FROM artikler WHERE Id=$id";
+             $result= mysqli_query($connection, $sql);
+             $row=mysqli_fetch_array($result);
+			 
+			 
+			 $titel=$row['Titel'];
+			$rubrik=$row['Rubrik'];
+			$indhold=$row['Indhold'];
+			 }
+	}
+?>
+
+
+         <form method="POST">
+         <p>Titel:</p>
+         <input type="text" name="Titel" value="<?php echo $titel ?>"/><br>
+         <p>Rubrik:</p>
+         <input type="text" name="Rubrik" value="<?php echo $titel ?>"/><br>
+         <p>Indhold:</p>
+         <textarea name="Indhold" rows="4" cols="20"> <?php echo $indhold ?></textarea><br>
+         <input type="submit" value="Opret" name="submit"/>
+         </form>
+         
+<?php
+		 //CRUD side opret ny 
+if (isset($_POST['submit']))
+{
+     $titel= $_POST['Titel'];
+	 $rubrik= $_POST['Rubrik'];
+	 $indhold= $_POST['Indhold'];
+	 
+
+	 
+	 $sql="INSERT INTO Artikler (Titel, Rubrik, Indhold) VALUES ('$titel', '$rubrik', '$indhold')";
+	 mysqli_query($connection, $sql);
+}
+
+?>
+    <form method="post">
+         <p>Titel:</p>
+         <input type="text" name="Titel" value=""/><br>
+         <p>Rubrik:</p>
+         <input type="text" name="Rubrik" value=""/><br>
+         <p>Indhold:</p>
+         <textarea name="Indhold" rows="4" cols="20">
+         </textarea><br>
+         <input type="submit" value="Opret" name="submit"/>
+         </form>
+     <p><a href="index.php">Tilbage til forsiden</a></p>
+     
+<?php
+	 //CRUD side slet 
+include 'includes/db_conection.php';
+$id=$_GET['id'];
+$sql="DELETE FROM artikler WHERE Id=$id";
+$result= mysqli_query($connection, $sql);
+
+header("Location: index.php");exit;
+?>
