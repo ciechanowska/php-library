@@ -1,0 +1,662 @@
+<?php
+    // Dynamisk web index side
+	
+    // start outputbuffer, så indholdet først sendes til browseren
+    // når alt indholdet på siden er genereret
+    ob_start();
+    // start session, så vi kan holde styr på hvem der er logget på
+    session_start();
+
+    // under udviklingen af siden, sættes error_reporting til E_ALL
+    // så kommer alle advarsler og beskeder frem på skærmen
+    error_reporting(E_ALL);
+    // fortæl serveren at den skal benytte danske standarder
+    // Især vigtigt når der udskrives datoer og tider
+    setlocale(LC_ALL, "danish");
+
+    // åben forbindelsen til databsen
+    require_once ('assets/database_connection.php');
+    // hent hjælpe funktioner
+    require_once ('assets/functions.php');
+
+    // her sættes standard siden der vises
+    $page_frontend = 'frontpage.php';
+    // her findes ud af hvilke side der vises
+    require_once ('includes/page_frontend.php');
+?>
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta charset="utf-8">
+        <title>Dynamisk Webproduktion Nyhedssite</title>
+        <!-- http://www.bootstrapcdn.com/ -->
+        <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.no-icons.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
+        <link href="//netdna.bootstrapcdn.com/bootswatch/3.0.0/flatly/bootstrap.min.css" rel="stylesheet">
+        <link href="assets/css/frontend.css" rel="stylesheet" type="text/css" />
+        
+
+
+    </head>
+    <body>
+        <div class="container wrapper">
+            <header>
+                <h1>Dynamisk Webproduktion Nyhedssite</h1>
+            </header>
+
+            <nav class="top">
+                <?php
+                    // inkluder menuen
+                    include ('includes/menu.php');
+                ?>
+            </nav>
+
+            <section>
+                <?php
+                    // her indlæses den ønskede fil
+                    include ($page_frontend);
+                ?>
+            </section>
+
+            <footer>
+                <p>
+                    CMK News 2005 - <?php echo date('Y');?>
+                </p>
+            </footer>
+        </div>
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+        <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
+        <?php
+		
+		//HASH/SALT
+		if(isset($_SESSION['user'])){
+		echo "mine rettigheder";
+		$user_id = $_SESSION['user']['user_id'];
+		$sql_ret ="SELECT * FROM users INNER JOIN roles ON roles.role_id = users.fk_roles_id WHERE user_id = '$user_id'";
+		    $result = mysqli_query($database_link, $query) or if_sql_error_then_die(mysqli_error($database_link), $query, __LINE__, __FILE__);
+                    // hvis det lykkes at opdatere brugeren, så genindlæs bruger
+                    // listen
+					
+					while ($row = mysqli_fetch_assoc($result))
+					{
+						echo "<br>".$row['role_title'];
+						}
+						
+            // udskriv debug informationer, funktionen ligger i functions.php
+            print_debug_info();
+		}
+        ?>
+    </body>
+</html>
+
+--------------------------------------------------------------------------------------------------
+
+
+
+
+<?php
+     // Dynamisk web redaktører
+	 
+	 
+    // denne fil inkluderes fra index.php, så der er allerede hul igennem
+    // til database, sessions og al design osv...
+    // skulle det ske at nogen prøvede at åbne filen direkte,
+    // så indlæses siden korrekt med en header-location
+    if ( !isset($database_link))
+    {
+        die(header('location: index.php?page=editors'));
+    }
+	//Test om session er sat
+	if(isset($_SESSION['category']))
+	{
+		$_SESSION['category'] = $_SESSION['category'];
+	}
+	else
+	{
+		$_SESSION['category'] = $_POST['category'];
+	}
+	
+	//sæt session til hvad der er valgt i dropdown
+	if(isset($_POST['choose_cat']))
+	{
+		$_SESSION['category'] = $_POST['category'];
+	}
+	
+	//tilføj nye editors
+		if (isset($_POST['addEditors']) && is_array($_POST['not_editor']))
+		{
+			$c = $_SESSION['category'];
+			
+			foreach ($_POST['not_editor'] as $user)
+			{
+				$user = ($user * 1); // quick int convertion
+				$query = "INSERT INTO category_editors VALUES($user, $c)";
+				header('location: index.php?page=editors');
+			}
+		}
+		//fjern editors
+		if (isset($_POST['removeEditors']) && is_array($_POST['is_editor']) )
+		{
+		$c = $_SESSION['category'];
+			
+			foreach ($_POST['is_editor'] as $user)
+			{
+			$user = ($user * 1); // quick int convertion
+				
+				
+				$query = "DELETE FROM category_editors WHERE fk_users_id = '$user' AND fk_categories_id = '$c'";
+				
+				header('location: index.php?page=editors');
+			}
+	  }
+		
+		
+?>
+
+
+<div class="row">
+	<div class="col-md-3">
+    <form method="post">
+    	<select class="form-control" name="category">
+        <?php	
+		$sql ="select * from categories";
+           $result = mysqli_query($database_link, $query) or die(mysqli_error($database_link));
+        while ($row = mysqli_fetch_assoc($result))
+        {
+            echo '<option value="'.$row['category_id'].'">'.$row['category_title'].'</option>';
+        
+        }
+           ?>
+        </select>
+    </div>
+    <div class="col-md-1">
+        <button class="btn btn-default btn-md" name="choose_cat" type="submit">Vælg</button>
+      
+    </div>
+</div>
+
+<div class="row">
+	<div class="col-md-5">
+    	<h3>Ikke Redaktører</h3>
+    </div>
+    
+    <div class="col-md-2"> </div>
+    
+    <div class="col-md-5">
+    	<h3>Redaktører</h3>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-5">
+   
+        <select class="form-control" name="not_editor[]" multiple="multiple" size="20">
+        <?php 
+		$c = $_SESSION['category'];
+		
+        $query = "
+        SELECT user_id, user_name
+        FROM users
+        WHERE user_id NOT IN (
+        SELECT fk_users_id
+        FROM category_editors
+        WHERE fk_categories_id = $c
+        )
+        AND fk_roles_id = 3";// 3 == redaktører
+        
+        $result = mysqli_query($database_link, $query) or die(mysqli_error($database_link));
+        while ($row = mysqli_fetch_assoc($result))
+        {
+            echo '<option value="'.$row['user_id'].'">'.$row['user_name'].'</option>';
+        
+        }
+	
+        ?>
+        </select>
+    </div>
+
+	<div class="col-md-2">
+    	<button class="btn btn-lg btn-block btn-success"  name="addEditors" type="submit" ><i class="fa fa-refresh"></i></button>
+        
+        <button class="btn btn-lg btn-block btn-default" name="removeEditors" type="submit"  value="<?php echo $row['category_id'];?>|<?php echo $row['user_id']; ?>"><i class="fa fa-undo"></i></button>
+    </div>
+	<div class="col-md-5">
+        <select class="form-control" name="is_editor[]" multiple="multiple" size="20">
+        <?php 
+		$c = $_SESSION['category'];
+		
+        $query = "
+        SELECT user_id, user_name
+        FROM users
+        INNER JOIN category_editors ON fk_users_id = user_id 
+        WHERE fk_categories_id = $c
+        AND fk_roles_id = 3"; // 3 == redaktør
+        
+        $result = mysqli_query($database_link, $query) or die(mysqli_error($database_link));
+        while ($row = mysqli_fetch_assoc($result))
+        {
+            echo '<option value="'.$row['user_id'].'">'.$row['user_name'].'</option>';
+        }
+		if (isset($_POST['is_editor']) && is_array($_POST['is_editor']))
+		{
+			foreach ($_POST['is_editor'] as $user)
+			{
+				$user = ($user * 1); // quick int convertion 
+				$query = " DELETE FROM category_editors
+				WHERE fk_users_id = $user
+				AND fk_categories_id = $category_id";
+				mysqli_query($database_link, $query) or die (mysqli_error($database_link));
+			}
+		}
+		
+        ?>
+        </select>
+        </form>
+	</div>
+</div>
+
+------------------------------------------------------------------------------------------------------
+
+
+<?php
+    // Dynamisk web login med HASH/SALT
+	
+    // denne fil inkluderes fra index.php, så der er allerede hul igennem
+    // til database, sessions og al design osv...
+    // skulle det ske at nogen prøvede at åbne filen direkte,
+    // så indlæses siden korrekt med en header-location
+    if ( !isset($database_link))
+    {
+        die(header('location: index.php?page=login'));
+    }
+
+    // default forudfyld værdier til formularen
+    $email = "bb@cmk-dynamisk-web.dk";
+    $password = "1234";
+
+    // login
+    if (isset($_POST['login_submit']))
+    {
+        // start med at sikre data fra formularen, med en escape_string
+        $email = mysqli_real_escape_string($database_link, $_POST['login_email']);
+        $password = mysqli_real_escape_string($database_link, $_POST['login_password']);
+		//HASH/SALT
+		$password = $email.$password."her er tekst";
+		$password = md5($password);
+		
+
+        $query = "  SELECT user_id, user_name, user_email, role_access
+                    FROM users
+                    INNER JOIN roles ON role_id = users.fk_roles_id
+                    WHERE user_email = '$email'
+                    AND user_password = '$password'";
+        $result = mysqli_query($database_link, $query) or if_sql_error_then_die(mysqli_error($database_link), $query, __LINE__, __FILE__);
+        // hvis der ikke er EN række i udtrækket, vises en fejlbesked
+        if (mysqli_num_rows($result) <> 1)
+        {
+            echo '<p class="alert alert-danger"><strong>FEJL</strong> Ukendt Email eller Kodeord</p>';
+        }
+        else
+        {
+            // hvis der er EN række, gemmes alt sammen i session['user']
+            $_SESSION['user'] = mysqli_fetch_assoc($result);
+            // og brugeren sendes til forsiden
+            die(header('location: index.php'));
+        }
+    }
+
+    // logud
+    if (isset($_GET['action']) && $_GET['action'] == 'logout')
+    {
+        // slet alt i session['user'] og indlæs forsiden
+        unset($_SESSION['user']);
+        die(header('location: index.php'));
+    }
+?>
+
+<div class="row">
+    <div class="col-5">
+        <form class="form-horizontal" method="post">
+            <div class="form-group">
+                <label for="login_email" class="col-lg-2 control-label">Email</label>
+                <div class="col-lg-4">
+                    <input type="email" class="form-control" name="login_email" placeholder="Email" value="<?php echo $email ?>"  required autofocus  />
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="login_password" class="col-lg-2 control-label">Kodeord</label>
+                <div class="col-lg-4">
+                    <input type="password" class="form-control" name="login_password" placeholder="Kodeord" value="<?php echo $password ?>" required />
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-lg-offset-2 col-lg-10">
+                    <input type="submit" class="btn btn-default" name="login_submit" value="Login">
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+---------------------------------------------------------------------------------------------------------------
+
+
+<?php
+    // Dynamisk web add user, HASH og SALT
+	
+    // denne fil inkluderes fra index.php, så der er allerede hul igennem
+    // til database, sessions og al design osv...
+    // skulle det ske at nogen prøvede at åbne filen direkte,
+    // så indlæses siden korrekt med en header-location
+    if ( !isset($database_link))
+    {
+        die(header('location: index.php?page=users'));
+    }
+
+    // her oprettes de variabler der benyttes til at oprette en bruger
+    // de er tomme til at starte med.
+    $user_name = '';
+    $user_email = '';
+    $role_id = 1;
+
+    // hvis der er trykket på gem knappen, så er der data der skal håndteres
+    if (isset($_POST['user_submit']))
+    {
+        // gå ud fra formen er udfyldt korrekt
+        $form_ok = true;
+
+        // hent værdier fra formularen, husk at 'escape'
+        $user_name = mysqli_real_escape_string($database_link, $_POST['user_name']);
+        $user_email = mysqli_real_escape_string($database_link, $_POST['user_email']);
+        $user_password = mysqli_real_escape_string($database_link, $_POST['user_password']);
+        $user_password_repeat = mysqli_real_escape_string($database_link, $_POST['user_password_repeat']);
+        $role_id = ($_POST['role_id'] * 1);
+
+        // valider om felterne opfylder de krav der måtte være
+        // udskriv en fejl, hvis et af felterne fejler
+        // og sæt $form_ok variablen til false
+        if ($user_name == '')
+        {
+            $form_ok = false;
+            echo '<p class="alert alert-danger">Udfyld Navn</p>';
+        }
+
+        if ($user_email == '')
+        {
+            $form_ok = false;
+            echo '<p class="alert alert-danger">Udfyld Email</p>';
+        }
+        else if ( !filter_var($user_email, FILTER_VALIDATE_EMAIL))
+        {
+            $form_ok = false;
+            echo '<p class="alert alert-danger">Emailen er ikke gyldig</p>';
+        }
+
+        if ($role_id < 0)
+        {
+            $form_ok = false;
+            echo '<p class="alert alert-danger">Vælg hvilken rolle brugeren skal have</p>';
+        }
+
+        // der skal være skrevet i begge kodeords felter
+        if ($user_password == '' || $user_password_repeat == '')
+        {
+            $form_ok = false;
+            echo '<p class="alert alert-danger">Udfyld Kodeord</p>';
+        }
+        // og de to kodeord skal være ens
+        else if ($user_password != $user_password_repeat)
+        {
+            $form_ok = false;
+            echo '<p class="alert alert-danger">De to kodeord er ikke ens</p>';
+        }
+
+        // hvis alle felterne er i orden, så indsættes der i databasen
+        if ($form_ok)
+		
+			//HASH/SALT		
+		$user_password = $user_email.$user_password."her er tekst";
+		$user_password = md5($user_password);
+
+					
+        {
+            $query = "
+				INSERT INTO users 
+					(user_name, user_email, user_password, fk_roles_id) 
+				VALUES 
+					('$user_name','$user_email', '$user_password','$role_id')";
+            $result = mysqli_query($database_link, $query) or if_sql_error_then_die(mysqli_error($database_link), $query, __LINE__, __FILE__);
+            // hvis det lykkes at indsætte i databasen,
+            // så genindlæs kategori liste
+            if ($result)
+            {
+                $_SESSION['message'] .= 'Brugeren blev oprettet<br />';
+                die(header('location: index.php?page=users'));
+            }
+        }
+    }
+?>
+<div class="col-lg-6">
+	<form method="post" role="form">
+		<div class="form-group">
+			<label for="user_name">Navn</label>
+			<input type="text" class="form-control" name="user_name" id="user_name" placeholder="Brugerns Navn" value="<?php echo $user_name; ?>" maxlength="32" required>
+		</div>
+		<div class="form-group">
+			<label for="user_email">Email</label>
+			<input type="email" class="form-control" name="user_email" id="user_email" placeholder="Email" value="<?php echo $user_email; ?>" maxlength="128" required>
+		</div>
+		<div class="form-group">
+			<label for="user_password">Kodeord</label>
+			<input type="password" class="form-control" name="user_password" id="user_password" placeholder="Kodeord" value=""  required>
+		</div>
+		<div class="form-group">
+			<label for="user_password_repeat">Gentag Kodeord</label>
+			<input type="password" class="form-control" name="user_password_repeat" id="user_password_repeat" placeholder="Gentag Kodeord" value="" required>
+		</div>
+		<div class="form-group">
+			<label for="role_id">Rolle</label>
+			<select class="form-control" name="role_id" id="role_id">
+				<option value="0">Vælg Rolle</option>
+				<?php
+                    $query = "SELECT role_id, role_title FROM roles ORDER BY role_access ASC";
+                    $result = mysqli_query($database_link, $query) or if_sql_error_then_die(mysqli_error($database_link), $query, __LINE__, __FILE__);
+                    if (mysqli_num_rows($result) > 0)
+                    {
+                        while ($row = mysqli_fetch_assoc($result))
+                        {
+                            echo '<option value="'.$row['role_id'].'">'.$row['role_title'].'</option>';
+                        }
+                    }
+				?>
+			</select>
+		</div>
+		<input type="submit" class="btn btn-success" name="user_submit" value="Gem" />
+		<a href="index.php?page=users" class="btn btn-default" onclick="return confirm('Er du sikker på du vil annullere?')">Annuller</a>
+	</form>
+</div>
+
+-------------------------------------------------------------------------------------------------
+
+
+<?php
+     // Dynamisk web user_edit, HASH og SALT
+	 
+    // denne fil inkluderes fra index.php, så der er allerede hul igennem
+    // til database, sessions og al design osv...
+    // skulle det ske at nogen prøvede at åbne filen direkte,
+    // så indlæses siden korrekt med en header-location
+    if ( !isset($database_link))
+    {
+        die(header('location: index.php?page=users'));
+    }
+
+    // denne side er afhængig af at have en user id i URL
+    // findes den ikke, sendes vi tilbage til brugerlisten
+    if ( !isset($_GET['user_id']))
+    {
+        die(header('location: index.php?page=users'));
+    }
+    $user_id = ($_GET['user_id'] * 1);
+
+    // her oprettes de variabler der benyttes til at oprette en bruger
+    // de er tomme til at starte med.
+    $user_name = '';
+    $user_email = '';
+    $role_id = 1;
+
+    // når der er trykket på gem knappen, så er der data som skal håndteres
+    if (isset($_POST['user_submit']))
+    {
+        // gå ud fra formen er udfyldt korrekt
+        $form_ok = true;
+
+        // hent værdier fra formularen, husk at 'escape'
+        $user_name = mysqli_real_escape_string($database_link, $_POST['user_name']);
+        $user_email = mysqli_real_escape_string($database_link, $_POST['user_email']);
+        $user_password = mysqli_real_escape_string($database_link, $_POST['user_password']);
+        $user_password_repeat = mysqli_real_escape_string($database_link, $_POST['user_password_repeat']);
+        $role_id = ($_POST['role_id'] * 1);
+
+        // valider om felterne opfylder de krav der måtte være
+        // udskriv en fejl, hvis et af felterne fejler
+        // og sæt $form_ok variablen til false
+        if ($user_name == '')
+        {
+            $form_ok = false;
+            echo '<p class="alert alert-danger">Udfyld Navn</p>';
+        }
+        if ($user_email == '')
+        {
+            $form_ok = false;
+            echo '<p class="alert alert-danger">Udfyld Email</p>';
+        }
+        else
+        if ( !filter_var($user_email, FILTER_VALIDATE_EMAIL))
+        {
+            $form_ok = false;
+            echo '<p class="alert alert-danger">Emailen er ikke gyldig</p>';
+        }
+        if ($role_id < 0)
+        {
+            $form_ok = false;
+            echo '<p class="alert alert-danger">Vælg hvilken rolle brugeren skal have</p>';
+        }
+
+        // kodeordet skal kun tjekkes, hvis et af felterne er udfyldt
+        // hvis ingen er udfyldt, så betyder det at kodeordet IKKE ændres
+        if ($user_password != '' || $user_password_repeat != '')
+        {
+            // hvis mindst et af felterne er udfyldt
+            // tjekkes om de to felter er ens...
+            if ($user_password != $user_password_repeat)
+            {
+                $form_ok = false;
+                echo '<p class="alert alert-danger">De to kodeord er ikke ens</p>';
+            }
+        }
+
+        // hvis alle felterne er i orden, så opdateres databasen
+        if ($form_ok)
+        {
+            $query = "
+            	UPDATE 
+            		users
+        		SET 
+            		user_name = '$user_name'
+					, user_email = '$user_email'
+        			, fk_roles_id = '$role_id'
+				WHERE 
+					user_id = '$user_id'";
+            $result = mysqli_query($database_link, $query) or if_sql_error_then_die(mysqli_error($database_link), $query, __LINE__, __FILE__);
+            // hvis det lykkes at opdatere brugeren, så genindlæs bruger listen
+            if ($result)
+            {
+                $_SESSION['message'] .= 'Brugeren blev opdateret<br />';
+
+                // hvis der er et nyt kodeord, opdaters kodeordet
+                // dette kan også ændres så det gøres sammen med resten
+                if ($user_password != '')
+                {
+				//HASH/SALT	
+		echo $user_password = $user_email.$user_password."her er tekst";
+		$user_password = md5($user_password);
+
+					
+					
+					
+                    $query = "UPDATE users SET user_password = '$user_password' WHERE user_id = '$user_id'";
+                    $result = mysqli_query($database_link, $query) or if_sql_error_then_die(mysqli_error($database_link), $query, __LINE__, __FILE__);
+                    // hvis det lykkes at opdatere brugeren, så genindlæs bruger
+                    // listen
+                    if ($result)
+                    {
+                        // en lille information der tilføjes session beskeden
+                        $_SESSION['message'] .= 'Det nye kodeord blev gemt<br />';
+                    }
+                }
+                // genindlæs bruger listen
+                die(header('location: index.php?page=users'));
+            }
+        }
+    }
+    else
+    {
+        // hvis der ikke er trykket på gem knappen,
+        // så hentes user  data ud af databasen,
+        // og puttes i de variabler der blev oprettet tidligere
+        $query = "SELECT user_name, user_email, fk_roles_id FROM users WHERE user_id = $user_id";
+        $result = mysqli_query($database_link, $query) or if_sql_error_then_die(mysqli_error($database_link), $query, __LINE__, __FILE__);
+        if ($row = mysqli_fetch_assoc($result))
+        {
+            $user_name = $row['user_name'];
+            $user_email = $row['user_email'];
+            $role_id = $row['fk_roles_id'];
+        }
+    }
+?>
+<div class="col-lg-6">
+    <form method="post" role="form">
+        <div class="form-group">
+            <label for="user_name">Navn</label>
+            <input type="text" class="form-control" name="user_name" id="user_name" placeholder="Brugerns Navn" value="<?php echo $user_name; ?>" maxlength="32" required>
+        </div>
+        <div class="form-group">
+            <label for="user_email">Email</label>
+            <input type="email" class="form-control" name="user_email" id="user_email" placeholder="Email" value="<?php echo $user_email; ?>" maxlength="128" required>
+        </div>
+        <div class="form-group">
+            <label for="user_password">Kodeord <em class="label label-default">(kun hvis kodeordet ønskes ændret)</em></label>
+            <input type="password" class="form-control" name="user_password" id="user_password" placeholder="Kodeord" value="">
+        </div>
+        <div class="form-group">
+            <label for="user_password_repeat">Gentag Kodeord <em class="label label-default">(kun hvis kodeordet ønskes ændret)</em></label>
+            <input type="password" class="form-control" name="user_password_repeat" id="user_password_repeat" placeholder="Gentag Kodeord" value="">
+        </div>
+        <div class="form-group">
+            <label for="role_id">Rolle</label>
+            <select class="form-control" name="role_id" id="role_id">
+                <option value="0">Vælg Rolle</option>
+                <?php
+                    $query = "SELECT role_id, role_title FROM roles ORDER BY role_access ASC";
+                    $result = mysqli_query($database_link, $query) or if_sql_error_then_die(mysqli_error($database_link), $query, __LINE__, __FILE__);
+                    if (mysqli_num_rows($result) > 0)
+                    {
+                        while ($row = mysqli_fetch_assoc($result))
+                        {
+                            $selected = ($role_id == $row['role_id'] ? ' selected="selected"' : '');
+                            echo '<option value="'.$row['role_id'].'"'.$selected.'>'.$row['role_title'].'</option>';
+                        }
+                    }
+                ?>
+            </select>
+        </div>
+        <input type="submit" class="btn btn-success" name="user_submit" value="Gem" />
+        <a href="index.php?page=users" class="btn btn-default" onclick="return confirm('Er du sikker på du vil annullere?')">Annuller</a>
+    </form>
+</div>
+
+----------------------------------------------------------------------------------------------------------
+
+
