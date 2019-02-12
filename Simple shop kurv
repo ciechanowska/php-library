@@ -1,0 +1,215 @@
+<?php
+ //Simple shop kurv side
+	 $kurv_vis = new basket();
+	 if(sizeof($kurv_vis->vis_kurv()) > 0)
+	 {
+		 foreach($kurv_vis->vis_kurv() as $produktid => $vare)
+		 {
+			 //Udregner prisen for det samlede antale vare
+			 $p = $vare["pris"];
+			 $a = $vare["antal"];
+			 
+			 $samlet = $p * $a; 
+			 //Viser indholdert af kurven
+			 echo "<form method='POST'>";
+			 echo "$vare[pris]<br>";
+			 echo "$vare[navn]<br>";
+			 echo "$vare[antal]<br>";
+			 echo "$samlet";
+			 echo"<input type='hidden' name='slet_id' value='$produktid'/><br>";
+			 echo"<input type='submit' name='fjern' value='Fjern'><br>";
+			
+			
+			 echo "</form><br>";
+		 }
+	 }
+?> 
+
+
+
+<?php 
+//Kurv class
+class basket 
+{
+private $_basket= array();
+public function basket() 
+{
+if(is_array($_SESSION["kurv"])){
+$this->tag_kurv();
+}
+else
+{
+$this->gem_kurv();
+}
+}
+private function tag_kurv()
+{
+$this->_basket = $_SESSION["kurv"];
+}
+private function gem_kurv()
+{
+$_SESSION['kurv']=$this->_basket;
+}
+public function putikurv($id,$antal,$pris,$navn)
+{
+$add_new=true;
+foreach($this->_basket as $produktid => $indhold)
+{
+if($produktid==$id)
+{
+$this->ret_vare($id,$antal);
+$add_new =false;
+}
+}
+if($add_new)
+{
+$this->_basket[$id]=array();
+$this->_basket[$id]['antal']=$antal;
+$this->_basket[$id]['navn']=$navn;
+$this->_basket[$id]['pris']=$pris;
+}
+$this->gem_kurv();
+
+}
+public function vis_kurv()
+{
+return $this->_basket;
+}
+public function ret_vare($id, $antal)
+{
+$this->_basket[$id]['antal'] += $antal;
+$this->gem_kurv();
+}
+public function slet_vare($id)
+{
+unset($this->_basket["$id"]);
+$this->gem_kurv();
+}
+public function afslut()
+{
+unset($_SESSION["kurv"]);
+}}
+?>
+
+
+
+<?php
+//Kurv behandling
+
+include("kurv_class.php");
+		
+if(!isset($_SESSION['kurv'])){
+	$_SESSION['kurv'] = array();
+}
+
+if(isset($_POST['add'])){
+
+ $kurv = new basket();
+ //public function putikurv($id,$antal,$pris,$navn)
+ $kurv->putikurv($_POST['id'], 1, $_POST['pris'], $_POST['navn']);
+}
+if(isset($_POST['fjern'])){
+
+	$kurv = new basket();
+	$kurv->slet_vare($_POST["slet_id"]);
+	
+}
+if(isset($_POST['tøm_kurv'])){
+	$_SESSION['kurv'] = array();
+}
+?>
+
+<?php
+//Functioner Simple shop
+function loginChecker() {
+    if(isset($_SESSION['bruger_id']) && $_SESSION['bruger_id'] != '') {
+       return true;
+    } else {
+       false;
+    }
+}
+
+
+function admin(){
+	if(check_login() == true && $_SESSION['fk_rolle_id']==1)
+	{
+		return true;
+	}
+	else{
+		return false;
+	
+	}
+	
+}
+
+function kunde(){
+	if(check_login() == true && $_SESSION['fk_rolle_id']==2)
+	{
+		return true;
+	}
+	else{
+		return false;
+	
+	}
+	
+}
+?>
+
+
+<?php
+//Kassen til Simle Shop
+ $kurv_vis = new basket();
+	 if(sizeof($kurv_vis->vis_kurv()) > 0)
+	 {
+		 foreach($kurv_vis->vis_kurv() as $produktid => $vare)
+		 {
+			 //Udregner prisen for det samlede antale vare
+			 $p = $vare["pris"];
+			 $a = $vare["antal"];
+			 
+			 $samlet = $p * $a; 
+			 //Viser indholdert af kurven
+			 
+			 echo "<form method='POST'>";
+			 echo "<form method='POST'>";
+			 echo "$vare[pris]<br>";
+			 echo "$vare[navn]<br>";
+			 echo "$vare[antal]<br>";
+			 echo "$samlet";
+			 echo"<input type='hidden' name='slet_id' value='$produktid'/><br>";
+			 echo"<input type='submit' name='fjern' value='Fjern'><br>";
+			 echo "</form><br>";
+		 }
+	 }
+	 ?>
+<?php
+//Bestilling
+if(isset($_SESSION['kurv']) && $_SESSION['kurv']>0){
+	
+	echo "Tak for din ordre!!";
+	
+	$query = "INSERT INTO bestilling_ordre (bestilling_ordere_dato, fk_bruger_id) VALUES ('$_SESSION[bruger_id]', NOW())";
+	
+		$result = mysql_query( $query, $link ) or die( mysql_error( $link ) );
+
+			$ordre_id = mysql_insert_id($link);	
+			
+			foreach ($_SESSION['kurv'] as $produktid => $kurv){
+			
+	$query = "INSERT INTO bestilling_produkt(bestilling_produkt_antal, fk_produkt_id, fk_bestilling_ordre_id) 
+	VALUES ('$produktid', '$kurv', '$ordre_id')";
+	echo "<p>$query</p>";
+$result = mysql_query( $query, $link ) or die( mysql_error( $link ) );
+				
+			}
+			
+		unset($_SESSION['kurv']);
+		
+}else{
+		echo "Der blev ikke bestilt nogen varer, da din kurv er tom.";
+	}
+?>
+
+---------------------------------------------------------------------------------------------------------
+
+
