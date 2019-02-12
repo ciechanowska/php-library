@@ -1,0 +1,178 @@
+<?php
+//Andedammen funktioner, slet, ret, add favorit
+
+// index side
+
+
+include ('connect.php');
+require_once('functions.php');
+
+session_start();
+
+if(isset($_POST['login']))
+{
+$p=$_POST['kode'];
+$u=$_POST['brugernavn'];
+
+
+$login_sql =  "SELECT bruger_id, bruger_navn, bruger_adgangskode FROM brugere WHERE bruger_navn = '$u' AND bruger_adgangskode = '$p'";
+ $result = mysqli_query ($db, $login_sql);
+ 
+ // Return the number of rows in result set
+  $rowcount=mysqli_num_rows($result);
+
+//echo $rowcount;
+if($rowcount==1)
+{
+	$_SESSION['logged_in']="ancie";
+	header("Location:admin.php");
+	
+}
+else
+{
+	header("Location:index.php");
+}
+}
+//Serach-form start
+   echo "<div align='right'>\n";
+   echo "<form name='searchform' method='get' action='search.php'";
+   echo "<input type='hidden' name='stype' value='forums' />\n";
+   echo "<input type='text' name='stext' class='textbox' style='width:150px' />\n";
+   echo "<input type='submit' name='search' value='Søg' class='button' />\n";
+   echo "</form>\n";
+   echo "</div>\n";
+   //Serach-form end
+
+
+?>
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Andedammen</title>
+  
+                <form class="loginform" method="post">
+                    <input type="text" placeholder="Brugernavn" name="brugernavn">
+                    <input type="password" placeholder="Kodeord" name="kode">
+                    <input type="submit" name="login" value="Log ind" class="btn">
+                </form>
+</head>
+
+
+
+
+<?php
+$_SESSION['userID']=1;
+if(isset($_GET['addfavorit'])){
+
+	add_favorit($_GET['addfavorit']);
+
+}
+
+$_SESSION['userID']=1;
+if(isset($_GET['removefavorit'])){
+
+	removefavorit($_GET['removefavorit']);
+
+}
+
+
+//Vis en artikel
+ if(isset($_GET['id'])){
+	$id=$_GET['id'];
+	$result= get_articele($id);
+	 echo "<h1>".$result['Titel']."</h1>";
+	 echo "<p>".$result['Indhold']."</p>";
+}else{
+	//Vis alle artikler
+   $result=get_articles();
+   foreach($result as $article){
+	 echo "<h1>".$article['Titel']."</h1>";
+	
+	 echo substr($article['Indhold'],0,50);
+	 echo"<p><a href='?id=$article[artikel_id]'>Vis</a>";
+	 echo"<p><a href='?addfavorit=$article[artikel_id]'>Tilføj favorit</a>";
+	 echo"<p><a href='?removefavorit=$article[artikel_id]'>Slet favorit</a>";
+	 }
+}
+?>
+</body>
+</html>
+
+
+
+
+
+<?php
+//  Andedammen functions side
+
+ function get_articles(){
+	 global $db;
+	 $sql=" SELECT* FROM artikler";
+	 $result=mysqli_query($db, $sql);
+	 while($row=mysqli_fetch_assoc($result)){
+		 $array[]=$row;
+		
+	 }
+	return $array;
+ }
+ 
+ 
+ function get_articele($id)
+ {
+	 global $db;
+	 $sql=" SELECT* FROM artikler WHERE articel_id=$id";
+	 $result=mysqli_query($db, $sql);
+	 $row=mysqli_fetch_assoc($result);
+	 return $row;
+	 
+ }
+ 
+ function add_favorit($id)
+ {
+	 global $db;
+	$brugerId=$_SESSION['userID'];
+	$sql= "INSERT INTO favoriter (FkbrugerID,FkArtikelID) VALUES ('$brugerId','$id')";
+	mysqli_query($db,$sql);
+	
+ }
+  function removefavorit($id)
+ {
+	 global $db;
+	 $brugerId=$_SESSION['userID'];
+	 $sql=" DELETE FROM favoriter WHERE FkArtikelID=$id";
+	 $result=mysqli_query($db, $sql);
+	 $row=mysqli_fetch_assoc($result);
+	
+ }
+ ?>
+ 
+ 
+ <?php
+ // Andedammen admin
+session_start();
+if (isset($_SESSION['logged_in'])){
+	
+}else{
+	header("Location: index.php");
+}
+include ('connect.php');
+
+?>
+  <div id="head">
+                
+                
+               <form action="loggedud.php" method="post">
+              <input type="submit" value="Log ud">
+              </form>
+                
+   </div>
+ 
+ 
+   
+<?php
+// Andedammen loggedud
+session_start();
+session_destroy();
+header("Location:admin.php");
+?>
